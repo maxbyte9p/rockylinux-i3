@@ -25,13 +25,13 @@ function echo_info() {
 echo_info "Checking if epel-release is installed..."
 if ! check_installed epel-release; then
 	echo_info "epel-release not installed. Installing now."
-	dnf install epel-release
+	dnf install epel-release -y
 fi
 
 echo_info "Checking if ansible is installed..."
 if ! check_installed ansible; then
 	echo_info "ansible not installed. Installing now."
-	dnf install ansible
+	dnf install ansible -y
 fi
 
 echo_info "Checking if CRB repository is enabled..."
