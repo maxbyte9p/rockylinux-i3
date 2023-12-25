@@ -1,0 +1,90 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  become: yes
+
+  vars:
+    required_groups:
+      - '@base-x'
+      - '@Common NetworkManager Submodules'
+      - '@Fonts'
+      - '@Hardware Support'
+      - '@Input Methods'
+      - '@Multimedia'
+      - '@Standard'
+
+    i3_core_packages:
+      - perl-AnyEvent
+      - perl-AnyEvent-I3
+      - perl-JSON-XS
+      - libXScrnSaver
+      - libXpm
+      - libappindicator
+      - i3
+      - i3lock
+      - i3status
+      - dmenu
+      - lightdm
+      - gnome-terminal
+
+    extra_packages:
+      - firefox
+      - network-manager-applet
+      - pulseaudio-utils
+      - pavucontrol
+      - htop
+      - thunar
+
+  tasks:
+    - name: Install required package groups.
+      dnf:
+        name: "{{ required_groups }}"
+        state: present
+
+    - name: Install i3 core packages.
+      dnf: 
+        name: "{{ i3_core_packages }}"
+        state: present
+
+    - name: Install extra packages.
+      dnf:
+        name: "{{ extra_packages }}"
+        state: present
+
+    - name: Install mock package build tool.
+      dnf: name=mock state=present
+
+    - name: Install rpmdevtools.
+      dnf: name=rpmdevtools state=present
+
+    - name: Git clone xss-lock from Fedora sources.
+      git:
+        repo: https://src.fedoraproject.org/rpms/xss-lock.git
+        dest: /tmp/xss-lock
+        refspec: 3ce324339da03bc32115092948df99a770b18e0b
+
+    - name: Fetch sources for xss-lock.
+      shell: |
+        cd /tmp/xss-lock
+        spectool -a -g xss-lock.spec
+
+    - name: Build xss-lock with mock.
+      command: "mock -r rocky+epel-9-x86_64 --sources /tmp/xss-lock --spec /tmp/xss-lock/xss-lock.spec --resultdir /tmp/xss-lock"
+      args:
+        creates: "/tmp/xss-lock/xss-lock-0.3.0^20140302git1e158fb20108-1.el9.x86_64.rpm"
+
+    - name: Install xss-lock.
+      dnf:
+        name: "/tmp/xss-lock/xss-lock-0.3.0^20140302git1e158fb20108-1.el9.x86_64.rpm"
+        disable_gpg_check: true
+        state: present
+
+    - name: Get current system default.
+      command: "systemctl get-default"
+      changed_when: false
+      register: systemdefault
+
+    - name: Set default to graphical target
+      command: "systemctl set-default graphical.target"
+      when: "'graphical' not in systemdefault.stdout"
